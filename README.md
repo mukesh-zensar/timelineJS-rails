@@ -61,9 +61,9 @@ javascript:
         type:   'timeline',
 	      maptype: 'toner',
 	      hash_bookmark: true,
-	      language: "#{@timeline.language}"
+	      language: "en"
       }
-      var timeline = new TL.Timeline('timeline-embed',"#{@timeline.url}",options);
+      var timeline = new TL.Timeline('timeline-embed',<Url of spreadsheet>,options);
   });
 ```
 
