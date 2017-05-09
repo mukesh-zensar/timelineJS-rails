@@ -49,6 +49,24 @@ If you want to set the font theme, just add the CSS to `application.css`:
  */
 ```
 
+## Sample Code
+```Sample
+= javascript_include_tag "jquery", "timelineJS/timeline"
+= stylesheet_link_tag "timelineJS/timeline", "timelineJS/font/font.pt"
+
+#timeline-embed style=("width: 100%; height: 600px")
+javascript:
+  $(function() {
+    var options = {
+        type:   'timeline',
+	      maptype: 'toner',
+	      hash_bookmark: true,
+	      language: "#{@timeline.language}"
+      }
+      var timeline = new TL.Timeline('timeline-embed',"#{@timeline.url}",options);
+  });
+```
+
 ## For more detail information visit [TimelineJS](https://github.com/NUKnightLab/TimelineJS)
 
 ## Thanks
