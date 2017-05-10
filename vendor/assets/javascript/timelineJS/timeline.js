@@ -5803,8 +5803,12 @@ if(typeof VMM != 'undefined' && typeof VMM.Slider == 'undefined') {
 			navigation.nextBtnContainer = VMM.appendAndGetElement(navigation.nextBtn, "<div>", "nav-container", temp_icon);
 			navigation.prevBtnContainer = VMM.appendAndGetElement(navigation.prevBtn, "<div>", "nav-container", temp_icon);
 			if (config.type == "timeline") {
-				navigation.nextDate = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", "date", "");
-				navigation.prevDate = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", "date", "");
+				klass = "date"
+				if (typeof config.language.right_to_left != 'undefined') {
+					klass = klass + ' vmm-drtl'
+				}
+				navigation.nextDate = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", klass, "");
+				navigation.prevDate = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", klass, "");
 			}
 			navigation.nextTitle = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", "title", "");
 			navigation.prevTitle = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", "title", "");
