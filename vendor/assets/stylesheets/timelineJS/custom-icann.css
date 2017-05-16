@@ -2,3 +2,6 @@
 .vmm-drtl {
 	direction: rtl;
 }
+.vmm-tar {
+	text-align: right !important;
+}
