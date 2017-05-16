@@ -5804,7 +5804,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Slider == 'undefined') {
 			navigation.prevBtnContainer = VMM.appendAndGetElement(navigation.prevBtn, "<div>", "nav-container", temp_icon);
 			if (config.type == "timeline") {
 				klass = "date"
-				if (typeof config.language.right_to_left != 'undefined') {
+				if (typeof config.language.right_to_left != 'undefined' && config.language.right_to_left) {
 					klass = klass + ' vmm-drtl'
 				}
 				navigation.nextDate = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", klass, "");
@@ -6114,8 +6114,12 @@ if (typeof VMM.Slider != 'undefined') {
 				c.text			+= VMM.createElement("p", VMM.Util.linkify_with_twitter(data.text, "_blank"));
 			}
 			
-			if (c.has.text || c.has.headline) {
-				c.text		= VMM.createElement("div", c.text, "container");
+			if (c.has.text || c.has.headline) {				
+				klass = 'container'
+				if (typeof VMM.master_config.language.right_to_left != 'undefined' && VMM.master_config.language.right_to_left) {
+					klass = klass + ' vmm-tar'
+				}
+				c.text		= VMM.createElement("div", c.text, klass );
 				//$text		=	VMM.appendAndGetElement($slide, "<div>", "text", c.text);
 				
 				$text		= VMM.appendAndGetElement($slide, "<div>", "text", VMM.TextElement.create(c.text));
