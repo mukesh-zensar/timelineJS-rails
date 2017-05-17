@@ -12,4 +12,3 @@
 //
 //= require timelineJS/jquery
 //= require timelineJS/timeline
-//= require timelineJS/storyjs-embed-cdn

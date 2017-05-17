@@ -4511,7 +4511,11 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaElement == 'undefined') {
 				}
 			// CAPTION
 				if (data.caption != null && data.caption != "") {
-					captionElem			=	"<div class='caption'>" + VMM.Util.linkify_with_twitter(data.caption, "_blank") + "</div>";
+					createDiv = "<div class='caption'>"
+					if (typeof VMM.master_config.language.right_to_left != 'undefined' && VMM.master_config.language.right_to_left) {
+						createDiv = "<div class='caption vmm-tar'>"
+					}
+					captionElem			=	createDiv + VMM.Util.linkify_with_twitter(data.caption, "_blank") + "</div>";
 				}
 			// IMAGE
 				if (m.type				==	"image") {
