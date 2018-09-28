@@ -1,5 +1,5 @@
 /*
-    TimelineJS - ver. 2.32.0 - 2014-05-08
+    TimelineJS - ver. 2.36.0 - 2015-05-12
     Copyright (c) 2012-2013 Northwestern University
     a project of the Northwestern University Knight Lab, originally created by Zach Wise
     https://github.com/NUKnightLab/TimelineJS
@@ -12,8 +12,8 @@
 ********************************************** */
 
 /**
-	* VéritéCo JS Core
-	* Designed and built by Zach Wise at VéritéCo zach@verite.co
+	* VÃ©ritÃ©Co JS Core
+	* Designed and built by Zach Wise at VÃ©ritÃ©Co zach@verite.co
 
 	* This Source Code Form is subject to the terms of the Mozilla Public
 	* License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -523,22 +523,16 @@ if(typeof VMM != 'undefined') {
 			});
 			/* CHECK FOR IE
 			================================================== */
-			if ( VMM.Browser.browser == "Explorer" && parseInt(VMM.Browser.version, 10) >= 7 && window.XDomainRequest) {
-				trace("IE JSON");
-				var ie_url = url;
-				if (ie_url.match('^http://')){
-					return jQuery.getJSON(ie_url, data, callback);
-				} else if (ie_url.match('^https://')) {
-					ie_url = ie_url.replace("https://","http://");
-					return jQuery.getJSON(ie_url, data, callback);
-				} else {
-					return jQuery.getJSON(url, data, callback);
-				}
-				
-			} else {
-				return jQuery.getJSON(url, data, callback);
-
+			if ( VMM.Browser.browser == "Explorer" && 
+				 parseInt(VMM.Browser.version, 10) >= 7 && 
+				 window.XDomainRequest && 
+				 url.match('^https?://')) {
+				trace("old IE JSON doesn't like retrieving from different protocol");
+					var colon = url.indexOf(':');
+					url = url.substr(colon+1); 
 			}
+			return jQuery.getJSON(url, data, callback);
+
 		}
 	}
 	
@@ -1006,6 +1000,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Browser == 'undefined') {
 			this.version = this.searchVersion(navigator.userAgent)
 				|| this.searchVersion(navigator.appVersion)
 				|| "an unknown version";
+			this.tridentVersion = this.searchTridentVersion(navigator.userAgent);
 			this.OS = this.searchString(this.dataOS) || "an unknown OS";
 			this.device = this.searchDevice(navigator.userAgent);
 			this.orientation = this.searchOrientation(window.orientation);
@@ -1054,6 +1049,11 @@ if(typeof VMM != 'undefined' && typeof VMM.Browser == 'undefined') {
 			var index = dataString.indexOf(this.versionSearchString);
 			if (index == -1) return;
 			return parseFloat(dataString.substring(index+this.versionSearchString.length+1));
+		},
+		searchTridentVersion: function (dataString) {
+		    var index = dataString.indexOf("Trident/");
+		    if (index == -1) return 0;
+		    return parseFloat(dataString.substring(index + 8));
 		},
 		dataBrowser: [
 			{
@@ -1257,8 +1257,8 @@ if(typeof VMM != 'undefined' && typeof VMM.Date == 'undefined') {
 				trace("DEBUG THIS, ITs A DATE");
 				date = d;
 			} else {
-				date = new Date(0, 0, 1, 0, 0, 0, 0);
-				
+				date = new Date(0); 
+				date.setMonth(0); date.setDate(1); date.setHours(0); date.setMinutes(0); date.setSeconds(0); date.setMilliseconds(0);
 				if ( d.match(/,/gi) ) {
 					date_array = d.split(",");
 					for(var i = 0; i < date_array.length; i++) {
@@ -1328,7 +1328,11 @@ if(typeof VMM != 'undefined' && typeof VMM.Date == 'undefined') {
 						p.year = true;
 					}
 					if (date_array[0] >= 0) {
-						date.setMonth(date_array[0] - 1);
+						var month = date_array[0] - 1;
+						date.setMonth(month);
+						// if (date.getMonth() != month) { 
+						// 	date.setMonth(month); // WTF javascript?
+						// }
 						p.month = true;
 					}
 					if (date_array[1] >= 0) {
@@ -1636,7 +1640,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Date == 'undefined') {
 	 */
 
 	var dateFormat = function () {
-		var	token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\1?|[LloSZ]|"[^"]*"|'[^']*'/g,
+		var	token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\1?|[WLloSZ]|"[^"]*"|'[^']*'/g,
 			timezone = /\b(?:[PMCEA][SDP]T|(?:Pacific|Mountain|Central|Eastern|Atlantic) (?:Standard|Daylight|Prevailing) Time|(?:GMT|UTC)(?:[-+]\d{4})?)\b/g,
 			timezoneClip = /[^-+\dA-Z]/g,
 			pad = function (val, len) {
@@ -1681,6 +1685,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Date == 'undefined') {
 				M = date[_ + "Minutes"](),
 				s = date[_ + "Seconds"](),
 				L = date[_ + "Milliseconds"](),
+				W = date.getWeek(),
 				o = utc ? 0 : date.getTimezoneOffset(),
 				flags = {
 					d:    d,
@@ -1709,7 +1714,8 @@ if(typeof VMM != 'undefined' && typeof VMM.Date == 'undefined') {
 					TT:   H < 12 ? "AM" : "PM",
 					Z:    utc ? "UTC" : (String(date).match(timezone) || [""]).pop().replace(timezoneClip, ""),
 					o:    (o > 0 ? "-" : "+") + pad(Math.floor(Math.abs(o) / 60) * 100 + Math.abs(o) % 60, 4),
-					S:    ["th", "st", "nd", "rd"][d % 10 > 3 ? 0 : (d % 100 - d % 10 != 10) * d % 10]
+					S:    ["th", "st", "nd", "rd"][d % 10 > 3 ? 0 : (d % 100 - d % 10 != 10) * d % 10],
+					W: 	W
 				};
 
 			return mask.replace(token, function ($0) {
@@ -1870,20 +1876,6 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 			return out;
 		},
 		
-		/*	* Given an int or decimal, turn that into string in $xxx,xxx.xx format.
-		================================================== */
-		number2money: function(n, symbol, padding) {
-			var symbol = (symbol !== null) ? symbol : true; // add $
-			var padding = (padding !== null) ? padding : false; //pad with .00
-			var number = VMM.Math2.floatPrecision(n,2); // rounded correctly to two digits, if decimals passed
-			var formatted = this.niceNumber(number);
-			// no decimal and padding is enabled
-			if (!formatted.split(/\./g)[1] && padding) formatted = formatted + ".00";
-			// add money sign
-			if (symbol) formatted = "$"+formatted;
-			return formatted;
-		},
-		
 		/*	* Returns a word count number
 		================================================== */
 		wordCount: function(s) {
@@ -2009,7 +2001,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 			    return text.replace(exp, "<a href='$1' target='_blank'>$3</a>");
 			}
 			// Email addresses
-			var emailAddressPattern = /(([a-zA-Z0-9_\-\.]+)@[a-zA-Z_]+?(?:\.[a-zA-Z]{2,6}))+/gim;
+			var emailAddressPattern = /([a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)/gim;
 			
 			//var twitterHandlePattern = /(@([\w]+))/g;
 			var twitterHandlePattern = /\B@([\w-]+)/gm;
@@ -2051,7 +2043,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 			if (!text) {
 				return text;
 			}
-			text = text.replace(/<\s*\w.*?>/g,"");
+			text = text.replace(/<\/?\s*\w.*?>/g,"");
 			return text;
 		},
 		
@@ -2181,12 +2173,12 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 					toTitleCase: function(string) {
 						var line = '';
 
-						var split = string.split(/([:.;?!][ ]|(?:[ ]|^)["“])/);
+						var split = string.split(/([:.;?!][ ]|(?:[ ]|^)["â€œ])/);
 
 						for (var i = 0; i < split.length; ++i) {
 							var s = split[i];
 
-							s = s.replace(/\b([a-zA-Z][a-z.'’]*)\b/g,this.__titleCaseDottedWordReplacer);
+							s = s.replace(/\b([a-zA-Z][a-z.'â€™]*)\b/g,this.__titleCaseDottedWordReplacer);
 
 			 				// lowercase the list of small words
 							s = s.replace(this.__lowerCaseWordsRE, this.__lowerReplacer);
@@ -2202,7 +2194,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 
 						// special cases
 						line = line.replace(/ V(s?)\. /g, ' v$1. ');
-						line = line.replace(/(['’])S\b/g, '$1s');
+						line = line.replace(/(['â€™])S\b/g, '$1s');
 						line = line.replace(/\b(AT&T|Q&A)\b/ig, this.__upperReplacer);
 
 						return line;
@@ -2241,6 +2233,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Util == 'undefined') {
 		
 	}).init();
 }
+
 
 /* **********************************************
      Begin LazyLoad.js
@@ -2731,7 +2724,8 @@ if(typeof VMM != 'undefined' && typeof VMM.Language == 'undefined') {
 			contract_timeline: "Contract Timeline",
 			wikipedia: "From Wikipedia, the free encyclopedia",
 			loading_content: "Loading Content",
-			loading: "Loading"
+			loading: "Loading",
+			swipe_nav: "Swipe to Navigate"
 		}
 	}
 };
@@ -2929,7 +2923,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 						
 			getOEmbed: function(tweet, callback) {
 				
-				var the_url = "//api.twitter.com/1/statuses/oembed.json?id=" + tweet.mid + "&omit_script=true&include_entities=true&callback=?",
+				var the_url = "https://api.twitter.com/1/statuses/oembed.json?id=" + tweet.mid + "&omit_script=true&include_entities=true&callback=?",
 					twitter_timeout	= setTimeout(VMM.ExternalAPI.twitter.errorTimeOutOembed, VMM.master_config.timers.api, tweet);
 					//callback_timeout= setTimeout(callback, VMM.master_config.timers.api, tweet);
 				
@@ -2973,7 +2967,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 			
 			getHTML: function(id) {
 				//var the_url = document.location.protocol + "//api.twitter.com/1/statuses/oembed.json?id=" + id+ "&callback=?";
-				var the_url = "//api.twitter.com/1/statuses/oembed.json?id=" + id+ "&omit_script=true&include_entities=true&callback=?";
+				var the_url = "https://api.twitter.com/1/statuses/oembed.json?id=" + id+ "&omit_script=true&include_entities=true&callback=?";
 				VMM.getJSON(the_url, VMM.ExternalAPI.twitter.onJSONLoaded);
 			},
 			
@@ -3031,7 +3025,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 						twit += td;
 						twit += "</p>";
 						
-						twit += "— " + d.user.name + " (<a href='https://twitter.com/" + d.user.screen_name + "'>@" + d.user.screen_name + "</a>) <a href='https://twitter.com/" + d.user.screen_name + "/status/" + d.id + "'>" + VMM.ExternalAPI.twitter.prettyParseTwitterDate(d.created_at) + " </a></blockquote></div>";
+						twit += "â€” " + d.user.name + " (<a href='https://twitter.com/" + d.user.screen_name + "'>@" + d.user.screen_name + "</a>) <a href='https://twitter.com/" + d.user.screen_name + "/status/" + d.id + "'>" + VMM.ExternalAPI.twitter.prettyParseTwitterDate(d.created_at) + " </a></blockquote></div>";
 						
 						tweet.content = twit;
 						tweet.raw = d;
@@ -3073,7 +3067,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 						var td = VMM.Util.linkify_with_twitter(d.results[i].text, "_blank");
 						twit += td;
 						twit += "</p>";
-						twit += "— " + d.results[i].from_user_name + " (<a href='https://twitter.com/" + d.results[i].from_user + "'>@" + d.results[i].from_user + "</a>) <a href='https://twitter.com/" + d.results[i].from_user + "/status/" + d.id + "'>" + VMM.ExternalAPI.twitter.prettyParseTwitterDate(d.results[i].created_at) + " </a></blockquote></div>";
+						twit += "â€” " + d.results[i].from_user_name + " (<a href='https://twitter.com/" + d.results[i].from_user + "'>@" + d.results[i].from_user + "</a>) <a href='https://twitter.com/" + d.results[i].from_user + "/status/" + d.id + "'>" + VMM.ExternalAPI.twitter.prettyParseTwitterDate(d.results[i].created_at) + " </a></blockquote></div>";
 						tweet.content = twit;
 						tweet.raw = d.results[i];
 						tweetArray.push(tweet);
@@ -3277,22 +3271,32 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 					layer				=	google.maps.MapTypeId['TERRAIN'];
 				}
 				
-				
-				if (type.of(VMM.Util.getUrlVars(m.id)["ll"]) == "string") {
-					has_location			= true;
-					latlong					= VMM.Util.getUrlVars(m.id)["ll"].split(",");
-					location				= new google.maps.LatLng(parseFloat(latlong[0]),parseFloat(latlong[1]));
+				var new_google_url_regex = new RegExp(/@([0-9\.\-]+),([0-9\.\-]+),(\d+)z/);
+
+				if (m.id.match(new_google_url_regex)) {
+					var match = m.id.match(new_google_url_regex)
+					lat = parseFloat(match[1]);
+					lng = parseFloat(match[2]);
+					location = new google.maps.LatLng(lat,lng);
+					zoom = parseFloat(match[3]);
+					has_location = has_zoom = true;
+				} else {
+					if (type.of(VMM.Util.getUrlVars(m.id)["ll"]) == "string") {
+							has_location			= true;
+							latlong					= VMM.Util.getUrlVars(m.id)["ll"].split(",");
+							location				= new google.maps.LatLng(parseFloat(latlong[0]),parseFloat(latlong[1]));
+							
+						} else if (type.of(VMM.Util.getUrlVars(m.id)["sll"]) == "string") {
+							latlong					= VMM.Util.getUrlVars(m.id)["sll"].split(",");
+							location				= new google.maps.LatLng(parseFloat(latlong[0]),parseFloat(latlong[1]));
+						} 
+						
+						if (type.of(VMM.Util.getUrlVars(m.id)["z"]) == "string") {
+							has_zoom				=	true;
+							zoom					=	parseFloat(VMM.Util.getUrlVars(m.id)["z"]);
+						}
+				}				
 					
-				} else if (type.of(VMM.Util.getUrlVars(m.id)["sll"]) == "string") {
-					latlong					= VMM.Util.getUrlVars(m.id)["sll"].split(",");
-					location				= new google.maps.LatLng(parseFloat(latlong[0]),parseFloat(latlong[1]));
-				} 
-				
-				if (type.of(VMM.Util.getUrlVars(m.id)["z"]) == "string") {
-					has_zoom				=	true;
-					zoom					=	parseFloat(VMM.Util.getUrlVars(m.id)["z"]);
-				}
-				
 				map_options = {
 					zoom:						zoom,
 					draggable: 					false, 
@@ -3651,7 +3655,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 				}
 			},
 			
-			map_subdomains: ["", "a.", "b.", "c.", "d."],
+			map_subdomains: ["a", "b", "c", "d"],
 			
 			map_attribution: {
 				"stamen": 			"Map tiles by <a href='http://stamen.com'>Stamen Design</a>, under <a href='http://creativecommons.org/licenses/by/3.0'>CC BY 3.0</a>. Data by <a href='http://openstreetmap.org'>OpenStreetMap</a>, under <a href='http://creativecommons.org/licenses/by-sa/3.0'>CC BY SA</a>.",
@@ -3661,26 +3665,26 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 									
 			map_providers: {
 				"toner": {
-					"url": 			"//{S}tile.stamen.com/toner/{Z}/{X}/{Y}.png",
+					"url": "https://stamen-tiles-{S}.a.ssl.fastly.net/toner/{Z}/{X}/{Y}.png",
 					"minZoom": 		0,
 					"maxZoom": 		20,
 					"attribution": 	"stamen"
 					
 				},
 				"toner-lines": {
-					"url": 			"//{S}tile.stamen.com/toner-lines/{Z}/{X}/{Y}.png",
+					"url": "https://stamen-tiles-{S}.a.ssl.fastly.net/toner-lines/{Z}/{X}/{Y}.png",
 					"minZoom": 		0,
 					"maxZoom": 		20,
 					"attribution": 	"stamen"
 				},
 				"toner-labels": {
-					"url": 			"//{S}tile.stamen.com/toner-labels/{Z}/{X}/{Y}.png",
+					"url": "https://stamen-tiles-{S}.a.ssl.fastly.net/toner-labels/{Z}/{X}/{Y}.png",
 					"minZoom": 		0,
 					"maxZoom": 		20,
 					"attribution": 	"stamen"
 				},
 				"sterrain": {
-					"url": 			"//{S}tile.stamen.com/terrain/{Z}/{X}/{Y}.jpg",
+					"url": "https://stamen-tiles-{S}.a.ssl.fastly.net/terrain/{Z}/{X}/{Y}.jpg",
 					"minZoom": 		4,
 					"maxZoom": 		20,
 					"attribution": 	"stamen"
@@ -3692,7 +3696,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 					"attribution": 	"apple"
 				},
 				"watercolor": {
-					"url": 			"//{S}tile.stamen.com/watercolor/{Z}/{X}/{Y}.jpg",
+					"url": "https://stamen-tiles-{S}.a.ssl.fastly.net/watercolor/{Z}/{X}/{Y}.jpg",
 					"minZoom": 		3,
 					"maxZoom": 		16,
 					"attribution": 	"stamen"
@@ -3895,7 +3899,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 				} else {
 					api_key = Aes.Ctr.decrypt(VMM.master_config.api_keys_master.flickr, VMM.master_config.vp, 256)
 				}
-				var the_url = "//api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=" + api_key + "&photo_id=" + m.id + "&format=json&jsoncallback=?";
+				var the_url = "https://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=" + api_key + "&photo_id=" + m.id + "&format=json&jsoncallback=?";
 				
 				VMM.getJSON(the_url, function(d) {
 					var flickr_id = VMM.ExternalAPI.flickr.getFlickrIdFromUrl(d.sizes.size[0].url);
@@ -4022,7 +4026,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 			},
 			
 			create: function(m, callback) {
-				var the_url = "//soundcloud.com/oembed?url=" + m.id + "&format=js&callback=?";
+				var the_url = "//soundcloud.com/oembed?url=" + m.id + "&maxheight=168&format=js&callback=?";
 				VMM.getJSON(the_url, function(d) {
 					VMM.attachElement("#"+m.uid, d.html);
 					callback();
@@ -4187,12 +4191,12 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 					height: 				'390',
 					width: 					'640',
 					playerVars: {
-						enablejsapi:		1,
-						color: 				'white',
-						showinfo:			0,
-						theme:				'light',
-						start:				m.start,
-						rel:				0
+						enablejsapi: 1,
+						color: ("dark" == VMM.master_config.Timeline.youtubeTheme) ? "red" : "white", // https://developers.google.com/youtube/player_parameters#color
+						showinfo: 0,
+						theme: ("undefined" !== VMM.master_config.Timeline.youtubeTheme) ? VMM.master_config.Timeline.youtubeTheme : "light", // https://developers.google.com/youtube/player_parameters#theme
+						start: m.start,
+						rel: 0
 					},
 					videoId: m.id,
 					events: {
@@ -4319,7 +4323,7 @@ if(typeof VMM != 'undefined' && typeof VMM.ExternalAPI == 'undefined') {
 				
 				// VIDEO
 				// TODO: NEED TO ADD ASYNC SCRIPT TO TIMELINE FLOW
-				VMM.attachElement("#" + m.uid, "<iframe frameborder='0' width='100%' height='100%' src='" + video_url + "'></iframe><script async src='http://platform.vine.co/static/scripts/embed.js' charset='utf-8'></script>");
+				VMM.attachElement("#" + m.uid, "<iframe frameborder='0' width='100%' height='100%' src='" + video_url + "'></iframe><script async src='https://platform.vine.co/static/scripts/embed.js' charset='utf-8'></script>");
 				
 			},
 			
@@ -4511,17 +4515,10 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaElement == 'undefined') {
 				}
 			// CAPTION
 				if (data.caption != null && data.caption != "") {
-					createDiv = "<div class='caption'>"
-					if (typeof VMM.master_config.language.right_to_left != 'undefined' && VMM.master_config.language.right_to_left) {
-						createDiv = "<div class='caption vmm-tar'>"
-					}
-					captionElem			=	createDiv + VMM.Util.linkify_with_twitter(data.caption, "_blank") + "</div>";
+					captionElem			=	"<div class='caption'>" + VMM.Util.linkify_with_twitter(data.caption, "_blank") + "</div>";
 				}
 			// IMAGE
 				if (m.type				==	"image") {
-					if (m.id.match("https://")) {
-						m.id = m.id.replace("https://","http://");
-					}
 					mediaElem			=	"<div class='media-image media-shadow'><img src='" + m.id + "' class='media-image'></div>";
 			// FLICKR
 				} else if (m.type		==	"flickr") {
@@ -4545,7 +4542,7 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaElement == 'undefined') {
 					VMM.ExternalAPI.vimeo.get(m);
 			// DAILYMOTION
 				} else if (m.type		==	"dailymotion") {
-					mediaElem			=	"<div class='media-shadow'><iframe class='media-frame video dailymotion' autostart='false' frameborder='0' width='100%' height='100%' src='http://www.dailymotion.com/embed/video/" + m.id + "'></iframe></div>";
+					mediaElem			=	"<div class='media-shadow'><iframe class='media-frame video dailymotion' autostart='false' frameborder='0' width='100%' height='100%' src='//www.dailymotion.com/embed/video/" + m.id + "'></iframe></div>";
 			// VINE
 				} else if (m.type		==	"vine") {
 					mediaElem			=	"<div class='media-shadow media-frame video vine' id='" + m.uid + "'>" + loading_messege + "</div>";
@@ -4660,7 +4657,7 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 		} else if (d.match('<iframe')) {
 			media.type = "iframe";
 			trace("IFRAME")
-			regex = /src=['"](\S+?)['"]\s/;
+			regex = /src=['"](\S+?)['"]/;
 			group = d.match(regex);
 			if (group) {
 				media.id = group[1];
@@ -4671,6 +4668,7 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 			if (d.match('v=')) {
 				media.id	= VMM.Util.getUrlVars(d)["v"];
 			} else if (d.match('\/embed\/')) {
+				// TODO Issue #618 better splitting
 				media.id	= d.split("embed\/")[1].split(/[?&]/)[0];
 			} else if (d.match(/v\/|v=|youtu\.be\//)){
 				media.id	= d.split(/v\/|v=|youtu\.be\//)[1].split(/[?&]/)[0];
@@ -4713,9 +4711,13 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 			}
 			media.type = "twitter";
 			success = true;
-		} else if (d.match("maps.google") && !d.match("staticmap")) {
+		} else if (d.match("maps.google") && !d.match("staticmap") && !d.match('streetview')) {
 			media.type = "google-map";
-		    media.id = d.split(/src=['|"][^'|"]*?['|"]/gi);
+		    media.id = d;
+			success = true;
+		} else if (d.match(/www.google.\w+\/maps/)) {
+			media.type = "google-map";
+		    media.id = d;
 			success = true;
 		} else if (d.match("plus.google")) {
 			media.type = "googleplus";
@@ -4738,7 +4740,11 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 			media.link = d;
 			media.id = VMM.ExternalAPI.instagram.getInstagramIdFromUrl(d)
 			success = Boolean(media.id);
-		} else if (d.match(/jpg|jpeg|png|gif|svg/i) || d.match("staticmap") || d.match("yfrog.com") || d.match("twitpic.com")) {
+		} else if (d.match(/jpg|jpeg|png|gif|svg|bmp/i) || 
+				   d.match("staticmap") || 
+				   d.match("yfrog.com") || 
+				   d.match("twitpic.com") ||
+				   d.match('maps.googleapis.com/maps/api/streetview')) {
 			media.type = "image";
 			media.id = d;
 			success = true;
@@ -4749,11 +4755,12 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 		} else if (d.match('(www.)?wikipedia\.org')) {
 			media.type = "wikipedia";
 			//media.id = d.split("wiki\/")[1];
+			// TODO Issue #618 better splitting
 			var wiki_id = d.split("wiki\/")[1].split("#")[0].replace("_", " ");
 			media.id = wiki_id.replace(" ", "%20");
 			media.lang = d.split("//")[1].split(".wikipedia")[0];
 			success = true;
-		} else if (d.indexOf('http://') == 0) {
+		} else if (d.indexOf('http://') == 0 || d.indexOf('https://') == 0) {
 			media.type = "website";
 			media.id = d;
 			success = true;
@@ -4777,6 +4784,7 @@ if(typeof VMM != 'undefined' && typeof VMM.MediaType == 'undefined') {
 		return false;
 	}
 }
+
 
 /* **********************************************
      Begin VMM.TextElement.js
@@ -5807,12 +5815,8 @@ if(typeof VMM != 'undefined' && typeof VMM.Slider == 'undefined') {
 			navigation.nextBtnContainer = VMM.appendAndGetElement(navigation.nextBtn, "<div>", "nav-container", temp_icon);
 			navigation.prevBtnContainer = VMM.appendAndGetElement(navigation.prevBtn, "<div>", "nav-container", temp_icon);
 			if (config.type == "timeline") {
-				klass = "date"
-				if (typeof config.language.right_to_left != 'undefined' && config.language.right_to_left) {
-					klass = klass + ' vmm-drtl'
-				}
-				navigation.nextDate = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", klass, "");
-				navigation.prevDate = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", klass, "");
+				navigation.nextDate = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", "date", "");
+				navigation.prevDate = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", "date", "");
 			}
 			navigation.nextTitle = VMM.appendAndGetElement(navigation.nextBtnContainer, "<div>", "title", "");
 			navigation.prevTitle = VMM.appendAndGetElement(navigation.prevBtnContainer, "<div>", "title", "");
@@ -5858,7 +5862,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Slider == 'undefined') {
 				
 				// EXPLAINER
 				$explainer = VMM.appendAndGetElement($slider_mask, "<div>", "vco-feedback", "");
-				showMessege(null, "Swipe to Navigate");
+				showMessege(null, VMM.master_config.language.messages.swipe_nav);
 				VMM.Lib.height($explainer, config.slider.height);
 				VMM.bindEvent($explainer, onExplainerClick);
 				VMM.bindEvent($explainer, onExplainerClick, 'touchend');
@@ -6118,12 +6122,8 @@ if (typeof VMM.Slider != 'undefined') {
 				c.text			+= VMM.createElement("p", VMM.Util.linkify_with_twitter(data.text, "_blank"));
 			}
 			
-			if (c.has.text || c.has.headline) {				
-				klass = 'container'
-				if (typeof VMM.master_config.language.right_to_left != 'undefined' && VMM.master_config.language.right_to_left) {
-					klass = klass + ' vmm-tar'
-				}
-				c.text		= VMM.createElement("div", c.text, klass );
+			if (c.has.text || c.has.headline) {
+				c.text		= VMM.createElement("div", c.text, "container");
 				//$text		=	VMM.appendAndGetElement($slide, "<div>", "text", c.text);
 				
 				$text		= VMM.appendAndGetElement($slide, "<div>", "text", VMM.TextElement.create(c.text));
@@ -6192,11 +6192,11 @@ var Aes = {};  // Aes namespace
  * @param {Number[][]} w   Key schedule as 2D byte-array (Nr+1 x Nb bytes)
  * @returns {Number[]}     Encrypted output state array
  */
-Aes.cipher = function(input, w) {    // main Cipher function [§5.1]
+Aes.cipher = function(input, w) {    // main Cipher function [Â§5.1]
   var Nb = 4;               // block size (in words): no of columns in state (fixed at 4 for AES)
   var Nr = w.length/Nb - 1; // no of rounds: 10/12/14 for 128/192/256-bit keys
 
-  var state = [[],[],[],[]];  // initialise 4xNb byte-array 'state' with input [§3.4]
+  var state = [[],[],[],[]];  // initialise 4xNb byte-array 'state' with input [Â§3.4]
   for (var i=0; i<4*Nb; i++) state[i%4][Math.floor(i/4)] = input[i];
 
   state = Aes.addRoundKey(state, w, 0, Nb);
@@ -6212,7 +6212,7 @@ Aes.cipher = function(input, w) {    // main Cipher function [§5.1]
   state = Aes.shiftRows(state, Nb);
   state = Aes.addRoundKey(state, w, Nr, Nb);
 
-  var output = new Array(4*Nb);  // convert state to 1-d array before returning [§3.4]
+  var output = new Array(4*Nb);  // convert state to 1-d array before returning [Â§3.4]
   for (var i=0; i<4*Nb; i++) output[i] = state[i%4][Math.floor(i/4)];
   return output;
 }
@@ -6223,7 +6223,7 @@ Aes.cipher = function(input, w) {    // main Cipher function [§5.1]
  * @param {Number[]} key Key as 16/24/32-byte array
  * @returns {Number[][]} Expanded key schedule as 2D byte-array (Nr+1 x Nb bytes)
  */
-Aes.keyExpansion = function(key) {  // generate Key Schedule (byte-array Nr+1 x Nb) from Key [§5.2]
+Aes.keyExpansion = function(key) {  // generate Key Schedule (byte-array Nr+1 x Nb) from Key [Â§5.2]
   var Nb = 4;            // block size (in words): no of columns in state (fixed at 4 for AES)
   var Nk = key.length/4  // key length (in words): 4/6/8 for 128/192/256-bit keys
   var Nr = Nk + 6;       // no of rounds: 10/12/14 for 128/192/256-bit keys
@@ -6255,14 +6255,14 @@ Aes.keyExpansion = function(key) {  // generate Key Schedule (byte-array Nr+1 x 
  * ---- remaining routines are private, not called externally ----
  */
  
-Aes.subBytes = function(s, Nb) {    // apply SBox to state S [§5.1.1]
+Aes.subBytes = function(s, Nb) {    // apply SBox to state S [Â§5.1.1]
   for (var r=0; r<4; r++) {
     for (var c=0; c<Nb; c++) s[r][c] = Aes.sBox[s[r][c]];
   }
   return s;
 }
 
-Aes.shiftRows = function(s, Nb) {    // shift row r of state S left by r bytes [§5.1.2]
+Aes.shiftRows = function(s, Nb) {    // shift row r of state S left by r bytes [Â§5.1.2]
   var t = new Array(4);
   for (var r=1; r<4; r++) {
     for (var c=0; c<4; c++) t[c] = s[r][(c+r)%Nb];  // shift into temp copy
@@ -6271,16 +6271,16 @@ Aes.shiftRows = function(s, Nb) {    // shift row r of state S left by r bytes [
   return s;  // see asmaes.sourceforge.net/rijndael/rijndaelImplementation.pdf
 }
 
-Aes.mixColumns = function(s, Nb) {   // combine bytes of each col of state S [§5.1.3]
+Aes.mixColumns = function(s, Nb) {   // combine bytes of each col of state S [Â§5.1.3]
   for (var c=0; c<4; c++) {
     var a = new Array(4);  // 'a' is a copy of the current column from 's'
-    var b = new Array(4);  // 'b' is a•{02} in GF(2^8)
+    var b = new Array(4);  // 'b' is aâ€¢{02} in GF(2^8)
     for (var i=0; i<4; i++) {
       a[i] = s[i][c];
       b[i] = s[i][c]&0x80 ? s[i][c]<<1 ^ 0x011b : s[i][c]<<1;
 
     }
-    // a[n] ^ b[n] is a•{03} in GF(2^8)
+    // a[n] ^ b[n] is aâ€¢{03} in GF(2^8)
     s[0][c] = b[0] ^ a[1] ^ b[1] ^ a[2] ^ a[3]; // 2*a0 + 3*a1 + a2 + a3
     s[1][c] = a[0] ^ b[1] ^ a[2] ^ b[2] ^ a[3]; // a0 * 2*a1 + 3*a2 + a3
     s[2][c] = a[0] ^ a[1] ^ b[2] ^ a[3] ^ b[3]; // a0 + a1 + 2*a2 + 3*a3
@@ -6289,7 +6289,7 @@ Aes.mixColumns = function(s, Nb) {   // combine bytes of each col of state S [§
   return s;
 }
 
-Aes.addRoundKey = function(state, w, rnd, Nb) {  // xor Round Key into state S [§5.1.4]
+Aes.addRoundKey = function(state, w, rnd, Nb) {  // xor Round Key into state S [Â§5.1.4]
   for (var r=0; r<4; r++) {
     for (var c=0; c<Nb; c++) state[r][c] ^= w[rnd*4+c][r];
   }
@@ -6308,7 +6308,7 @@ Aes.rotWord = function(w) {    // rotate 4-byte word w left by one byte
   return w;
 }
 
-// sBox is pre-computed multiplicative inverse in GF(2^8) used in subBytes and keyExpansion [§5.1.1]
+// sBox is pre-computed multiplicative inverse in GF(2^8) used in subBytes and keyExpansion [Â§5.1.1]
 Aes.sBox =  [0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
              0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
              0xb7,0xfd,0x93,0x26,0x36,0x3f,0xf7,0xcc,0x34,0xa5,0xe5,0xf1,0x71,0xd8,0x31,0x15,
@@ -6326,7 +6326,7 @@ Aes.sBox =  [0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0x
              0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
              0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16];
 
-// rCon is Round Constant used for the Key Expansion [1st col is 2^(r-1) in GF(2^8)] [§5.2]
+// rCon is Round Constant used for the Key Expansion [1st col is 2^(r-1) in GF(2^8)] [Â§5.2]
 Aes.rCon = [ [0x00, 0x00, 0x00, 0x00],
              [0x01, 0x00, 0x00, 0x00],
              [0x02, 0x00, 0x00, 0x00],
@@ -6374,7 +6374,7 @@ Aes.Ctr.encrypt = function(plaintext, password, nBits) {
   var key = Aes.cipher(pwBytes, Aes.keyExpansion(pwBytes));  // gives us 16-byte key
   key = key.concat(key.slice(0, nBytes-16));  // expand key to 16/24/32 bytes long
 
-  // initialise 1st 8 bytes of counter block with nonce (NIST SP800-38A §B.2): [0-1] = millisec, 
+  // initialise 1st 8 bytes of counter block with nonce (NIST SP800-38A Â§B.2): [0-1] = millisec, 
   // [2-3] = random, [4-7] = seconds, together giving full sub-millisec uniqueness up to Feb 2106
   var counterBlock = new Array(blockSize);
   
@@ -7093,7 +7093,12 @@ if(typeof VMM != 'undefined' && typeof VMM.Timeline == 'undefined') {
 			ease: 					"easeInOutExpo",
 			duration: 				1000,
 			gmap_key: 				"",
-			language: 				VMM.Language
+			language: 				VMM.Language,
+			tagSortFunction: 		function (arr) {
+				arr.sort(function (a, b) {
+					return a.localeCompare(b);
+				})
+			}
 		};
 		
 		if ( w != null && w != "") {
@@ -7369,7 +7374,7 @@ if(typeof VMM != 'undefined' && typeof VMM.Timeline == 'undefined') {
 			/* GET DATA
 			================================================== */
 			if (VMM.Browser.browser == "Explorer" || VMM.Browser.browser == "MSIE") {
-				if ( parseInt(VMM.Browser.version, 10) <= 7 ) {
+			    if (parseInt(VMM.Browser.version, 10) <= 7 && (VMM.Browser.tridentVersion == null || VMM.Browser.tridentVersion < 4)) {
 					ie7 = true;
 				}
 			}
@@ -9199,6 +9204,9 @@ if(typeof VMM.Timeline != 'undefined' && typeof VMM.Timeline.TimeNav == 'undefin
 			
 			// CREATE TAGS
 			tags = VMM.Util.deDupeArray(tags);
+
+			config.tagSortFunction(tags);
+
 			if (tags.length > 3) {
 				config.nav.rows.current = config.nav.rows.half;
 			} else {
@@ -9459,13 +9467,26 @@ if (typeof VMM.Timeline !== 'undefined' && typeof VMM.Timeline.DataObj == 'undef
 		model: {
 			
 			googlespreadsheet: {
-				
+				extractSpreadsheetKey: function(url) {
+					var key	= VMM.Util.getUrlVars(url)["key"];
+					if (!key) {
+						if (url.match("docs.google.com/spreadsheets/d/")) {
+							var pos = url.indexOf("docs.google.com/spreadsheets/d/") + "docs.google.com/spreadsheets/d/".length;
+							var tail = url.substr(pos);
+							key = tail.split('/')[0]
+						}
+					}
+					if (!key) { key = url}
+					return key;
+				},
 				getData: function(raw) {
 					var getjsondata, key, worksheet, url, timeout, tries = 0;
 					
-					key	= VMM.Util.getUrlVars(raw)["key"];
+					// new Google Docs URLs can specify 'key' differently. 
+					// that format doesn't seem to have a way to specify a worksheet.
+					key	= VMM.Timeline.DataObj.model.googlespreadsheet.extractSpreadsheetKey(raw);
 					worksheet = VMM.Util.getUrlVars(raw)["worksheet"];
-					if (typeof worksheet == "undefined") worksheet = "od6";
+					if (typeof worksheet == "undefined") worksheet = "1";
 					
 					url	= "https://spreadsheets.google.com/feeds/list/" + key + "/" + worksheet + "/public/values?alt=json";
 					
@@ -9525,7 +9546,12 @@ if (typeof VMM.Timeline !== 'undefined' && typeof VMM.Timeline.DataObj == 'undef
 						for(var i = 0; i < d.feed.entry.length; i++) {
 							var dd		= d.feed.entry[i],
 								dd_type	= "";
-						
+
+							if (typeof(dd.gsx$startdate) == 'undefined') {
+								VMM.fireEvent(global, VMM.Timeline.Config.events.messege, "Missing start date. Make sure the headers of your Google Spreadsheet have not been changed.");
+								return;
+							}
+
 							if (typeof dd.gsx$type != 'undefined') {
 								dd_type = dd.gsx$type.$t;
 							} else if (typeof dd.gsx$titleslide != 'undefined') {
@@ -9585,7 +9611,7 @@ if (typeof VMM.Timeline !== 'undefined' && typeof VMM.Timeline.DataObj == 'undef
 				getDataCells: function(raw) {
 					var getjsondata, key, url, timeout, tries = 0;
 					
-					key	= VMM.Util.getUrlVars(raw)["key"];
+					key	= VMM.Timeline.DataObj.model.googlespreadsheet.extractSpreadsheetKey(raw);
 					url	= "https://spreadsheets.google.com/feeds/cells/" + key + "/od6/public/values?alt=json";
 					
 					timeout = setTimeout(function() {
